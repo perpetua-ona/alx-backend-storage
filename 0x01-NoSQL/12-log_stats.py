@@ -1,40 +1,34 @@
 #!/usr/bin/env python3
-"""This file provides some stats about Nginx logs stored in MongoDB"""
+''' A Python3 Module '''
+
+
 from pymongo import MongoClient
 
 
-if __name__ == "__main__":
-    client = MongoClient('mongodb://127.0.0.1:27017')
-    nginx_collection = client.logs.nginx
+def log_start():
+    '''
+    provides some stats about Nginx logs stored in MongoDB
+    '''
+    params = MongoClient()
+    mongo_caller = params.logs
+    collection_caller = mongo_caller.nginx
 
-    count = nginx_collection.count_documents({})
-    get_count = nginx_collection.count_documents({'method': 'GET'})
-    post_count = nginx_collection.count_documents(
-        {'method': 'POST'})
-    put_count = nginx_collection.count_documents(
-        {'method': 'PUT'})
-    patch_count = nginx_collection.count_documents(
-        {'method': 'PATCH'})
-    delete_count = nginx_collection.count_documents(
-        {'method': 'DELETE'})
-    status_check = nginx_collection.count_documents({"path": "/status"})
-    # status_check = list(
-    #     nginx_collection.aggregate([
-    #             {
-    #                 '$match': {'$and': [{'path': '/status'},
-    #                                     {'method': 'GET'}]}
-    #             },
-    #             {
-    #                 '$count': "filters"
-    #             }
-    #         ])
-    # )[0].get('filters')
+    log_count = collection_caller.count_documents({})
+    print(f"{log_count} logs")
 
-    print(f"{count} logs")
-    print("Methods:")
-    print(f"\tmethod GET: {get_count}")
-    print(f"\tmethod POST: {post_count}")
-    print(f"\tmethod PUT: {put_count}")
-    print(f"\tmethod PATCH: {patch_count}")
-    print(f"\tmethod DELETE: {delete_count}")
+    methods = ["GET", "POST", "PUT", "PATCH", "DELETE"]
+    print("Methods: ")
+
+    for method in methods:
+        counts_method = collection_caller.count_documents({"method": method})
+        print(f"\tmethod {method}: {counts_method}")
+
+    status_check = collection_caller.count_documents({
+        "method": "GET", "path": "/status"
+        })
+
     print(f"{status_check} status check")
+
+
+if __name__ == "__main__":
+    log_start()
