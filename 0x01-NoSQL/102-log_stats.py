@@ -1,47 +1,45 @@
 #!/usr/bin/env python3
-"""This file provides some stats about Nginx logs stored in MongoDB"""
+""" MongoDB Operations with Python using pymongo """
 from pymongo import MongoClient
 
-
 if __name__ == "__main__":
+    """ Provides some stats about Nginx logs stored in MongoDB """
     client = MongoClient('mongodb://127.0.0.1:27017')
     nginx_collection = client.logs.nginx
 
-    count = nginx_collection.count_documents({})
-    get_count = nginx_collection.count_documents({'method': 'GET'})
-    post_count = nginx_collection.count_documents(
-        {'method': 'POST'})
-    put_count = nginx_collection.count_documents(
-        {'method': 'PUT'})
-    patch_count = nginx_collection.count_documents(
-        {'method': 'PATCH'})
-    delete_count = nginx_collection.count_documents(
-        {'method': 'DELETE'})
-    status_check = nginx_collection.count_documents({"path": "/status"})
-    ip_list = []
-    agg = nginx_collection.aggregate([
-        {
-            "$group": {
+    n_logs = nginx_collection.count_documents({})
+    print(f'{n_logs} logs')
+
+    methods = ["GET", "POST", "PUT", "PATCH", "DELETE"]
+    print('Methods:')
+    for method in methods:
+        count = nginx_collection.count_documents({"method": method})
+        print(f'\tmethod {method}: {count}')
+
+    status_check = nginx_collection.count_documents(
+        {"method": "GET", "path": "/status"}
+    )
+
+    print(f'{status_check} status check')
+
+    top_ips = nginx_collection.aggregate([
+        {"$group":
+            {
                 "_id": "$ip",
                 "count": {"$sum": 1}
             }
-        },
-        {
-            "$sort": {"count": -1}
-        },
-        {"$limit": 10}
+         },
+        {"$sort": {"count": -1}},
+        {"$limit": 10},
+        {"$project": {
+            "_id": 0,
+            "ip": "$_id",
+            "count": 1
+        }}
     ])
-    for i in agg:
-        ip_list.append(i)
-    print(f"{count} logs")
-    print("Methods:")
-    print(f"\tmethod GET: {get_count}")
-    print(f"\tmethod POST: {post_count}")
-    print(f"\tmethod PUT: {put_count}")
-    print(f"\tmethod PATCH: {patch_count}")
-    print(f"\tmethod DELETE: {delete_count}")
-    print(f"{status_check} status check")
+
     print("IPs:")
-    for i in ip_list:
-        print(f"\t{i.get('_id')}: {i.get('count')}")
-        # print("\t{}: {}".format(i.get('_id'), i.get('count')))
+    for top_ip in top_ips:
+        ip = top_ip.get("ip")
+        count = top_ip.get("count")
+        print(f'\t{ip}: {count}')
